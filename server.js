@@ -1,4 +1,7 @@
+/
 // MAX BRAIN - Backend jo voice/text command samajhta hai aur action decide karta hai
+// Flow: Tasker/Browser -> yeh server -> Gemini (function calling) -> action JSON -> wapas Tasker/Browser
+
 const express = require("express");
 const cors = require("cors");
 
@@ -6,9 +9,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Render.com env var me dalna
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
+// ---- Yeh "tools" hain jo Max perform kar sakta hai ----
+// Jab bhi naya action chahiye (jaise "alarm set karo"), yahan naya function add karo
 const tools = [
   {
     functionDeclarations: [
@@ -96,6 +101,8 @@ app.post("/command", async (req, res) => {
     });
 
     const data = await response.json();
+    console.log("GEMINI RAW RESPONSE:", JSON.stringify(data));
+
     const part = data?.candidates?.[0]?.content?.parts?.find((p) => p.functionCall);
 
     if (!part) {
@@ -103,6 +110,7 @@ app.post("/command", async (req, res) => {
     }
 
     const { name, args } = part.functionCall;
+    // Yeh JSON hi Tasker ko milega — Tasker isi ke hisaab se phone par action karega
     return res.json({ action: name, params: args });
   } catch (err) {
     console.error(err);
